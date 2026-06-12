@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmotionLens — Text Emotion Recognition</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #13131a;
+            --surface-2: #1a1a24;
+            --border: #2a2a3a;
+            --text: #e8e8f0;
+            --text-dim: #8888a0;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.3);
+            --sadness: #5B8DEE;
+            --joy: #FFD93D;
+            --love: #FF6B6B;
+            --anger: #E74C3C;
+            --fear: #9B59B6;
+            --surprise: #1ABC9C;
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background effects */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 30% 20%, rgba(108, 92, 231, 0.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(91, 141, 238, 0.04) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #e8e8f0, #6c5ce7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-dim);
+            font-size: 1.05rem;
+        }
+
+        .badge-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-dim);
+        }
+
+        /* Input area */
+        .input-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 32px;
+            transition: border-color 0.3s;
+        }
+
+        .input-section:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .input-section label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.05rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus { border-color: var(--accent); }
+        textarea::placeholder { color: #555568; }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #7c6df7;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--surface-2);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover { border-color: var(--text-dim); }
+
+        .sample-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .chip {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        /* Results */
+        .results { display: none; }
+        .results.show { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid { grid-template-columns: 1fr; }
+            header h1 { font-size: 2rem; }
+        }
+
+        .model-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            transition: border-color 0.3s;
+        }
+
+        .model-card:hover { border-color: #3a3a4a; }
+
+        .model-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .model-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+        }
+
+        .model-tag {
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tag-baseline { background: #1a2a1a; color: #66c2a5; }
+        .tag-bert { background: #2a1a1a; color: #fc8d62; }
+
+        .prediction-result {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .prediction-emoji {
+            font-size: 3.5rem;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+
+        .prediction-label {
+            font-size: 1.6rem;
+            font-weight: 700;
+            text-transform: capitalize;
+            margin-bottom: 4px;
+        }
+
+        .prediction-conf {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        /* Probability bars */
+        .prob-bar-container {
+            margin-bottom: 10px;
+        }
+
+        .prob-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            margin-bottom: 4px;
+        }
+
+        .prob-bar-label span:first-child { text-transform: capitalize; }
+
+        .prob-bar-label span:last-child {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+        }
+
+        .prob-bar-track {
+            height: 8px;
+            background: var(--surface-2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .prob-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0;
+        }
+
+        /* Loading */
+        .spinner {
+            display: none;
+            width: 20px; height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .spinner.show { display: inline-block; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        .unavailable {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>EmotionLens</h1>
+            <p>Real-time text emotion recognition — Baseline vs BERT comparison</p>
+            <div class="badge-row">
+                <span class="badge">TF-IDF + Logistic Regression</span>
+                <span class="badge">BERT Fine-Tuned</span>
+                <span class="badge">6 Emotions</span>
+                <span class="badge">20K Dataset</span>
+            </div>
+        </header>
+
+        <div class="input-section">
+            <label>Enter text to analyze</label>
+            <textarea id="textInput" placeholder="Type something emotional... e.g. 'I feel so happy today, everything is going great!'"></textarea>
+            <div class="btn-row">
+                <button class="btn-primary" id="analyzeBtn" onclick="analyze()">Analyze Emotion</button>
+                <div class="spinner" id="spinner"></div>
+                <button class="btn-secondary" onclick="clearAll()">Clear</button>
+            </div>
+            <div class="sample-chips">
+                <span class="chip" onclick="useSample(this)">I am so excited about this opportunity!</span>
+                <span class="chip" onclick="useSample(this)">I feel really lonely and nobody cares</span>
+                <span class="chip" onclick="useSample(this)">This makes me furious, how could they do that</span>
+                <span class="chip" onclick="useSample(this)">I'm terrified of what might happen next</span>
+                <span class="chip" onclick="useSample(this)">You are the sweetest person I've ever met</span>
+                <span class="chip" onclick="useSample(this)">I can't believe this actually happened, wow</span>
+            </div>
+        </div>
+
+        <div class="results" id="results">
+            <div class="results-grid">
+                <div class="model-card" id="baselineCard">
+                    <div class="model-header">
+                        <span class="model-name">Baseline Model</span>
+                        <span class="model-tag tag-baseline">TF-IDF + LogReg</span>
+                    </div>
+                    <div id="baselineResult"></div>
+                </div>
+                <div class="model-card" id="bertCard">
+                    <div class="model-header">
+                        <span class="model-name">Transformer Model</span>
+                        <span class="model-tag tag-bert">BERT Fine-Tuned</span>
+                    </div>
+                    <div id="bertResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>NLP Course Project — Istanbul Medipol University</p>
+            <p>Arya Ghazizadeh &amp; Mohammad Shafizadeh &middot; June 2026</p>
+        </footer>
+    </div>
+
+    <script>
+        const emotionColors = {
+            sadness: '#5B8DEE', joy: '#FFD93D', love: '#FF6B6B',
+            anger: '#E74C3C', fear: '#9B59B6', surprise: '#1ABC9C'
+        };
+        const emotionEmojis = {
+            sadness: '😢', joy: '😄', love: '❤️',
+            anger: '😠', fear: '😨', surprise: '😮'
+        };
+
+        function useSample(el) {
+            document.getElementById('textInput').value = el.textContent;
+            analyze();
+        }
+
+        function clearAll() {
+            document.getElementById('textInput').value = '';
+            document.getElementById('results').classList.remove('show');
+        }
+
+        function renderResult(containerId, data) {
+            const container = document.getElementById(containerId);
+            if (!data) {
+                container.innerHTML = '<div class="unavailable">Model not loaded — place model files in the app directory</div>';
+                return;
+            }
+
+            const emoji = emotionEmojis[data.label];
+            const color = emotionColors[data.label];
+
+            let barsHtml = '';
+            // Sort by probability descending
+            const sorted = Object.entries(data.all_probs).sort((a, b) => b[1] - a[1]);
+            for (const [emotion, prob] of sorted) {
+                const pct = (prob * 100).toFixed(1);
+                const barColor = emotionColors[emotion];
+                barsHtml += `
+                    <div class="prob-bar-container">
+                        <div class="prob-bar-label">
+                            <span>${emotionEmojis[emotion]} ${emotion}</span>
+                            <span>${pct}%</span>
+                        </div>
+                        <div class="prob-bar-track">
+                            <div class="prob-bar-fill" style="background:${barColor}" data-width="${pct}"></div>
+                        </div>
+                    </div>`;
+            }
+
+            container.innerHTML = `
+                <div class="prediction-result">
+                    <div class="prediction-emoji">${emoji}</div>
+                    <div class="prediction-label" style="color:${color}">${data.label}</div>
+                    <div class="prediction-conf">${(data.confidence * 100).toFixed(1)}% confidence</div>
+                </div>
+                ${barsHtml}`;
+
+            // Animate bars
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    container.querySelectorAll('.prob-bar-fill').forEach(bar => {
+                        bar.style.width = bar.dataset.width + '%';
+                    });
+                });
+            });
+        }
+
+        async function analyze() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) return;
+
+            const btn = document.getElementById('analyzeBtn');
+            const spinner = document.getElementById('spinner');
+            btn.disabled = true;
+            spinner.classList.add('show');
+
+            try {
+                const res = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await res.json();
+
+                renderResult('baselineResult', data.baseline);
+                renderResult('bertResult', data.bert);
+                document.getElementById('results').classList.add('show');
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                spinner.classList.remove('show');
+            }
+        }
+
+        // Enter key support
+        document.getElementById('textInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze(); }
+        });
+    </script>
+</body>
+</html>
