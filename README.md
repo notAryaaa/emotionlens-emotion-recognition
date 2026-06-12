@@ -90,7 +90,7 @@ emotionlens-emotion-recognition/
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/emotionlens-emotion-recognition.git
+git clone https://github.com/notAryaaa/emotionlens-emotion-recognition.git
 cd emotionlens-emotion-recognition
 
 # Create virtual environment
